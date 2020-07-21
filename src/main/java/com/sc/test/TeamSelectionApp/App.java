@@ -1,7 +1,6 @@
 package com.sc.test.TeamSelectionApp;
 
 import java.io.File;
-import java.io.IOException;
 
 import com.sc.team.model.FootballPlayer;
 import com.sc.team.service.AbstractTeamSelection;
@@ -9,7 +8,7 @@ import com.sc.team.service.FootballTeamSelection;
 
 public class App {
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 
 		checkArgs(args);
 

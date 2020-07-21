@@ -1,15 +1,20 @@
 package com.sc.team.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import com.sc.team.exception.FootBallSelectionexception;
 import com.sc.team.model.FootBallPlayerType;
 import com.sc.team.model.FootballPlayer;
 import com.sc.team.util.TeamUtil;
 
 public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer> {
+
+	private Integer teamSize = 11;
 
 	private static final Double HEIGHT_CUTOFF = 5.5;
 	private static final Double BMI_CUTOFF = 24d;
@@ -43,9 +48,14 @@ public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer>
 
 	/**
 	 * Contains main algorithm to select team
+	 * 
+	 * @throws FootBallSelectionexception
 	 */
 	@Override
-	protected List<FootballPlayer> selectTeam(List<FootballPlayer> fitPlayers) {
+	protected List<FootballPlayer> selectTeam(List<FootballPlayer> fitPlayers) throws FootBallSelectionexception {
+
+		if (fitPlayers.isEmpty())
+			return List.of();
 
 		List<FootballPlayer> selectedAllRounder = fitPlayers.stream().filter(goalScoredFilter.and(goalSavedFilter))
 				.collect(Collectors.toList());
@@ -73,27 +83,38 @@ public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer>
 	 * @param selectedDefender
 	 * @param selectedAllRounder
 	 * @return
+	 * @throws FootBallSelectionexception
 	 */
 	private List<FootballPlayer> createBestPossibleTeam(List<FootballPlayer> selectedStriker,
-			List<FootballPlayer> selectedDefender, List<FootballPlayer> selectedAllRounder) {
+			List<FootballPlayer> selectedDefender, List<FootballPlayer> selectedAllRounder)
+			throws FootBallSelectionexception {
+
+		Map<FootBallPlayerType, List<FootballPlayer>> result = new HashMap<FootBallPlayerType, List<FootballPlayer>>();
+
+		int totalPossiblePlayers = Math.min(selectedStriker.size(), selectedDefender.size()) * 2
+				+ selectedAllRounder.size();
+
+		if (totalPossiblePlayers < getTeamSize() || selectedAllRounder.size() == 0)
+			throw new FootBallSelectionexception("Unable to form Team");
 
 		// Striker and Defender number difference
 		int difference = selectedStriker.size() - selectedDefender.size();
 		System.out.println(String.format("Difference Between Striker and Defender Selected is %d", difference));
 
-		if (difference == 0 && selectedAllRounder.size() % 2 == 0)
+		if (difference == 0)
 			// Striker and Defender are Equal and distribute all rounder equally
-			distributeAllRounderEqually(selectedStriker, selectedDefender, selectedAllRounder);
-		else if (difference != 0 && selectedAllRounder.size() >= Math.abs(difference)
-				&& (selectedAllRounder.size() - difference) % 2 == 0)
+			result = distributeAllRounderEqually(selectedStriker, selectedDefender, selectedAllRounder);
+		else
 			// Striker and Defender are Unequal but all rounder can fill that gap
-			distAllRounderToEqualStrikerAndDefender(selectedStriker, selectedDefender, selectedAllRounder, difference);
-		else {
-			System.out.println("Unable to form Team");
-			return List.of();
-		}
+			result = distAllRounderToEqualStrikerAndDefender(selectedStriker, selectedDefender, selectedAllRounder,
+					difference);
 
-		return markSelectedPlayer(selectedStriker, selectedDefender);
+		List<FootballPlayer> markSelectedPlayer = markSelectedPlayer(result);
+
+		if (markSelectedPlayer.size() != getTeamSize())
+			throw new FootBallSelectionexception("Unable to reach team size");
+
+		return markSelectedPlayer;
 	}
 
 	/**
@@ -104,16 +125,16 @@ public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer>
 	 * @param selectedDefender
 	 * @return
 	 */
-	private List<FootballPlayer> markSelectedPlayer(List<FootballPlayer> selectedStriker,
-			List<FootballPlayer> selectedDefender) {
+	private List<FootballPlayer> markSelectedPlayer(Map<FootBallPlayerType, List<FootballPlayer>> result) {
 
 		List<FootballPlayer> finalSelectedTeam = new ArrayList<>();
 
-		selectedStriker.forEach(player -> player.setPlayerType(FootBallPlayerType.Striker).setSelected(Boolean.TRUE));
-		selectedDefender.forEach(player -> player.setPlayerType(FootBallPlayerType.Defender).setSelected(Boolean.TRUE));
-
-		finalSelectedTeam.addAll(selectedStriker);
-		finalSelectedTeam.addAll(selectedDefender);
+		result.get(FootBallPlayerType.Striker).forEach(player -> finalSelectedTeam
+				.add(player.setPlayerType(FootBallPlayerType.Striker).setSelected(Boolean.TRUE)));
+		result.get(FootBallPlayerType.Defender).forEach(player -> finalSelectedTeam
+				.add(player.setPlayerType(FootBallPlayerType.Defender).setSelected(Boolean.TRUE)));
+		result.get(FootBallPlayerType.Allrounder).forEach(player -> finalSelectedTeam
+				.add(player.setPlayerType(FootBallPlayerType.Allrounder).setSelected(Boolean.TRUE)));
 
 		return finalSelectedTeam;
 	}
@@ -128,20 +149,47 @@ public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer>
 	 * @param selectedAllRounder
 	 * @param difference
 	 */
-	private void distAllRounderToEqualStrikerAndDefender(List<FootballPlayer> selectedStriker,
-			List<FootballPlayer> selectedDefender, List<FootballPlayer> selectedAllRounder, int difference) {
+	private Map<FootBallPlayerType, List<FootballPlayer>> distAllRounderToEqualStrikerAndDefender(
+			List<FootballPlayer> selectedStriker, List<FootballPlayer> selectedDefender,
+			List<FootballPlayer> selectedAllRounder, int difference) {
 
-		List<FootballPlayer> differencePlayerList = selectedAllRounder.subList(0, Math.abs(difference));
+		Map<FootBallPlayerType, List<FootballPlayer>> result = new HashMap<FootBallPlayerType, List<FootballPlayer>>();
+		List<FootballPlayer> resultStriker = new ArrayList<FootballPlayer>();
+		List<FootballPlayer> resultDefender = new ArrayList<FootballPlayer>();
+		List<FootballPlayer> resultAllRounder = new ArrayList<FootballPlayer>();
 
-		List<FootballPlayer> additionalAllRounderPlayerList = selectedAllRounder.subList(Math.abs(difference),
-				selectedAllRounder.size());
+		if (difference < 0) {
+			resultDefender.addAll(selectedDefender.subList(0, selectedStriker.size()));
+			resultStriker.addAll(selectedStriker);
+		} else {
+			resultStriker.addAll(selectedStriker.subList(0, selectedDefender.size()));
+			resultDefender.addAll(selectedDefender);
+		}
 
-		if (difference < 0)
-			selectedStriker.addAll(differencePlayerList);
-		else
-			selectedDefender.addAll(differencePlayerList);
+		System.out.println(String.format("Selected Defender and Striker are %d and %d", resultDefender.size(),
+				resultStriker.size()));
 
-		distributeAllRounderEqually(selectedStriker, selectedDefender, additionalAllRounderPlayerList);
+		resultAllRounder.addAll(selectedAllRounder.subList(0, getTeamSize() - resultStriker.size() * 2));
+
+		populateMap(result, resultStriker, resultDefender, resultAllRounder);
+
+		return result;
+
+	}
+
+	/**
+	 * Object Holder
+	 * 
+	 * @param result
+	 * @param selectedStriker
+	 * @param selectedDefender
+	 * @param selectedAllRounder
+	 */
+	private void populateMap(Map<FootBallPlayerType, List<FootballPlayer>> result, List<FootballPlayer> selectedStriker,
+			List<FootballPlayer> selectedDefender, List<FootballPlayer> selectedAllRounder) {
+		result.put(FootBallPlayerType.Striker, selectedStriker);
+		result.put(FootBallPlayerType.Defender, selectedDefender);
+		result.put(FootBallPlayerType.Allrounder, selectedAllRounder);
 
 	}
 
@@ -152,18 +200,41 @@ public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer>
 	 * @param selectedDefender
 	 * @param selectedAllRounder
 	 */
-	private void distributeAllRounderEqually(List<FootballPlayer> selectedStriker,
-			List<FootballPlayer> selectedDefender, List<FootballPlayer> selectedAllRounder) {
+	private Map<FootBallPlayerType, List<FootballPlayer>> distributeAllRounderEqually(
+			List<FootballPlayer> selectedStriker, List<FootballPlayer> selectedDefender,
+			List<FootballPlayer> selectedAllRounder) {
 
-		for (int i = 0; i < selectedAllRounder.size(); i++) {
+		Map<FootBallPlayerType, List<FootballPlayer>> result = new HashMap<FootBallPlayerType, List<FootballPlayer>>();
 
-			if (i % 2 == 0)
-				selectedStriker.add(selectedAllRounder.get(i));
-			else
-				selectedDefender.add(selectedAllRounder.get(i));
+		List<FootballPlayer> resultStriker = new ArrayList<FootballPlayer>();
+		List<FootballPlayer> resultDefender = new ArrayList<FootballPlayer>();
+		List<FootballPlayer> resultAllRounder = new ArrayList<FootballPlayer>();
 
+		int teamMidSize = getTeamSize() / 2;
+		System.out.println(String.format("Team Median number is %d", teamMidSize));
+
+		if (selectedStriker.size() > teamMidSize && selectedAllRounder.size() > 0) {
+			resultStriker.addAll(selectedStriker.subList(0, teamMidSize));
+			resultDefender.addAll(selectedDefender.subList(0, teamMidSize));
+			resultAllRounder.add(selectedAllRounder.get(0));
+		} else {
+			resultStriker.addAll(selectedStriker);
+			resultDefender.addAll(selectedDefender);
+			resultAllRounder.addAll(selectedAllRounder.subList(0, getTeamSize() - resultStriker.size() * 2));
 		}
 
+		populateMap(result, resultStriker, resultDefender, resultAllRounder);
+
+		return result;
+
+	}
+
+	public Integer getTeamSize() {
+		return teamSize;
+	}
+
+	public void setTeamSize(Integer teamSize) {
+		this.teamSize = teamSize;
 	}
 
 }

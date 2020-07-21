@@ -16,7 +16,7 @@ import com.sc.team.model.Player;
  */
 public abstract class AbstractTeamSelection<T extends Player> {
 
-	public void teamSelectionProcess(String filePath) throws IOException {
+	public void teamSelectionProcess(String filePath) throws Exception {
 
 		// Parse CSV File
 		List<String> allRecords = parseFile(filePath);
@@ -53,7 +53,7 @@ public abstract class AbstractTeamSelection<T extends Player> {
 
 	protected abstract List<T> convertIntoPlayer(List<String> allRecords);
 
-	protected abstract List<T> selectTeam(List<T> fitPlayers);
+	protected abstract List<T> selectTeam(List<T> fitPlayers) throws Exception;
 
 	protected abstract List<T> filterFitPlayer(List<T> allPlayer);
 

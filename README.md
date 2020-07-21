@@ -1,7 +1,7 @@
 # TeamSelection
 
 Problem Statement :
-	Build a application to select football team with equal number of Striker and Defenders in the team.
+	Build a application to select football team with equal number of Striker and Defenders in the team with rest player as All Rounder.
 	
 Input :
 	List of players will be received as an input in a csv file in below fixed format
@@ -12,7 +12,8 @@ Selection Criteria :
 		BMI < 24 and Height > 5.5
 	2. Striker player should have scored at least 50 goals
 	3. Defender player should have saved at least 30 goals
-	4. All rounder player should be marked as striker or defender to even out the Striker and Defender number
+	4. Striker and Defender should be even out and rest players should be all rounder
+	5. Team size should be matched i.e. 11 in our case
 	
 Solution :
 	1. Used a Template pattern to define skeleton of team selection algorithm.
@@ -28,5 +29,5 @@ Assumptions :
 	3. If number of players fit and falling into Striker,Defender or All Rounder, is not an even number a team cannon be formed and empty collection will be returned.
 	4. Output of result has been put in console and can be extended to write the result in a file.
 	5. Only players selected in the team is getting printed as it will be too verbose to print all players.
-	6. JUnit test case has been written to cover selection criteria. File Parsing and Fitness criteria test should be written for more coverage.
+	6. JUnit test case has been written to cover selection criterion. File Parsing and Fitness criteria test should be written for more coverage.
 	
