@@ -95,19 +95,14 @@ public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer>
 				+ selectedAllRounder.size();
 
 		if (totalPossiblePlayers < getTeamSize() || selectedAllRounder.size() == 0)
-			throw new FootBallSelectionexception("Unable to form Team");
+			throw new FootBallSelectionexception("Unable to form Team as there is no all rounder");
 
 		// Striker and Defender number difference
 		int difference = selectedStriker.size() - selectedDefender.size();
 		System.out.println(String.format("Difference Between Striker and Defender Selected is %d", difference));
 
-		if (difference == 0)
-			// Striker and Defender are Equal and distribute all rounder equally
-			result = distributeAllRounderEqually(selectedStriker, selectedDefender, selectedAllRounder);
-		else
-			// Striker and Defender are Unequal but all rounder can fill that gap
-			result = distAllRounderToEqualStrikerAndDefender(selectedStriker, selectedDefender, selectedAllRounder,
-					difference);
+		result = distAllRounderToEqualStrikerAndDefender(selectedStriker, selectedDefender, selectedAllRounder,
+				difference);
 
 		List<FootballPlayer> markSelectedPlayer = markSelectedPlayer(result);
 
@@ -141,8 +136,8 @@ public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer>
 
 	/**
 	 * In case Striker and Defender are not in equal number this method will help in
-	 * classifying all rounder accordingly as striker or defender to even out the
-	 * number
+	 * picking equal striker and defender and rest player as all rounder to reach
+	 * the team size
 	 * 
 	 * @param selectedStriker
 	 * @param selectedDefender
@@ -190,42 +185,6 @@ public class FootballTeamSelection extends AbstractTeamSelection<FootballPlayer>
 		result.put(FootBallPlayerType.Striker, selectedStriker);
 		result.put(FootBallPlayerType.Defender, selectedDefender);
 		result.put(FootBallPlayerType.Allrounder, selectedAllRounder);
-
-	}
-
-	/**
-	 * Distributes All Rounder equally between Striker and Defender list
-	 * 
-	 * @param selectedStriker
-	 * @param selectedDefender
-	 * @param selectedAllRounder
-	 */
-	private Map<FootBallPlayerType, List<FootballPlayer>> distributeAllRounderEqually(
-			List<FootballPlayer> selectedStriker, List<FootballPlayer> selectedDefender,
-			List<FootballPlayer> selectedAllRounder) {
-
-		Map<FootBallPlayerType, List<FootballPlayer>> result = new HashMap<FootBallPlayerType, List<FootballPlayer>>();
-
-		List<FootballPlayer> resultStriker = new ArrayList<FootballPlayer>();
-		List<FootballPlayer> resultDefender = new ArrayList<FootballPlayer>();
-		List<FootballPlayer> resultAllRounder = new ArrayList<FootballPlayer>();
-
-		int teamMidSize = getTeamSize() / 2;
-		System.out.println(String.format("Team Median number is %d", teamMidSize));
-
-		if (selectedStriker.size() > teamMidSize && selectedAllRounder.size() > 0) {
-			resultStriker.addAll(selectedStriker.subList(0, teamMidSize));
-			resultDefender.addAll(selectedDefender.subList(0, teamMidSize));
-			resultAllRounder.add(selectedAllRounder.get(0));
-		} else {
-			resultStriker.addAll(selectedStriker);
-			resultDefender.addAll(selectedDefender);
-			resultAllRounder.addAll(selectedAllRounder.subList(0, getTeamSize() - resultStriker.size() * 2));
-		}
-
-		populateMap(result, resultStriker, resultDefender, resultAllRounder);
-
-		return result;
 
 	}
 
